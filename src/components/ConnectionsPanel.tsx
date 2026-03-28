@@ -11,7 +11,6 @@ export function ConnectionsPanel() {
     simulateMutualAccept,
     declineInvite,
     openThread,
-    logout,
   } = useApp();
   const [profilePeerId, setProfilePeerId] = useState<string | null>(null);
 
@@ -19,7 +18,7 @@ export function ConnectionsPanel() {
   const peer = profilePeerId ? MOCK_PEERS.find((p) => p.id === profilePeerId) : null;
 
   return (
-    <div className="mx-auto max-w-md px-4 pb-36 pt-6">
+    <div className="mx-auto max-w-md px-4 pb-36 pt-6 tablet:max-w-4xl tablet:px-6 tablet:pb-24 tablet:pt-8 lg:max-w-6xl lg:px-8 lg:pb-14 lg:pt-10">
       <header className="mb-6">
         <p className="font-display text-xs font-semibold uppercase tracking-widest text-coral-500">
           {t("connections")}
@@ -28,17 +27,23 @@ export function ConnectionsPanel() {
         <p className="mt-1 text-sm text-ink-700">{t("conn_sub")}</p>
       </header>
 
-      {pending.length > 0 && (
-        <section className="mb-8">
-          <h3 className="text-sm font-semibold text-ink-900">{t("pending_sent")}</h3>
-          <ul className="mt-3 flex flex-col gap-3">
+      <div className="tablet:grid tablet:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] tablet:gap-5 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.3fr)] lg:gap-6">
+        <section className="section-fade tablet:rounded-3xl tablet:bg-white tablet:p-4 tablet:shadow-soft tablet:ring-1 tablet:ring-mist-200 lg:p-5">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-ink-900">{t("pending_sent")}</h3>
+            <span className="rounded-full bg-mist-100 px-2.5 py-1 text-[11px] font-semibold text-ink-700">
+              {pending.length}
+            </span>
+          </div>
+          {pending.length > 0 ? (
+            <ul className="stagger-list mt-3 flex flex-col gap-3">
             {pending.map((inv) => {
               const p = MOCK_PEERS.find((x) => x.id === inv.peerId);
               if (!p) return null;
               return (
                 <li
                   key={inv.id}
-                  className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-mist-200"
+                  className="token-card hover-depth rounded-2xl bg-white p-4 ring-1 ring-mist-200"
                 >
                   <p className="font-medium text-ink-950">@{p.username}</p>
                   <p className="text-xs text-ink-700">{t("waiting")}</p>
@@ -61,25 +66,29 @@ export function ConnectionsPanel() {
                 </li>
               );
             })}
-          </ul>
+            </ul>
+          ) : (
+            <p className="mt-3 rounded-2xl bg-white p-5 text-sm text-ink-700 ring-1 ring-mist-200 lg:bg-mist-50">
+              {t("no_threads")}
+            </p>
+          )}
         </section>
-      )}
 
-      <section>
-        <h3 className="text-sm font-semibold text-ink-900">{t("active_chats")}</h3>
-        {threads.length === 0 ? (
-          <p className="mt-3 rounded-2xl bg-white p-6 text-sm text-ink-700 ring-1 ring-mist-200">
-            {t("no_threads")}
-          </p>
-        ) : (
-          <ul className="mt-3 flex flex-col gap-3">
+        <section className="section-fade mt-8 tablet:mt-0 tablet:rounded-3xl tablet:bg-white tablet:p-4 tablet:shadow-soft tablet:ring-1 tablet:ring-mist-200 lg:p-5">
+          <h3 className="text-sm font-semibold text-ink-900">{t("active_chats")}</h3>
+          {threads.length === 0 ? (
+            <p className="mt-3 rounded-2xl bg-white p-6 text-sm text-ink-700 ring-1 ring-mist-200 lg:bg-mist-50">
+              {t("no_threads")}
+            </p>
+          ) : (
+            <ul className="stagger-list mt-3 flex flex-col gap-3">
             {threads.map((th) => {
               const p = MOCK_PEERS.find((x) => x.id === th.peerId);
               if (!p) return null;
               return (
                 <li
                   key={th.id}
-                  className="flex items-center gap-3 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-mist-200"
+                  className="token-card hover-depth flex items-center gap-3 rounded-2xl bg-white p-4 ring-1 ring-mist-200"
                 >
                   <button
                     type="button"
@@ -106,17 +115,10 @@ export function ConnectionsPanel() {
                 </li>
               );
             })}
-          </ul>
-        )}
-      </section>
-
-      <button
-        type="button"
-        onClick={logout}
-        className="mt-10 w-full rounded-2xl border border-mist-200 py-3 text-sm font-semibold text-ink-700"
-      >
-        {t("logout")}
-      </button>
+            </ul>
+          )}
+        </section>
+      </div>
 
       {peer && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink-950/40 p-4 backdrop-blur-sm sm:items-center">

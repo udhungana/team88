@@ -25,7 +25,7 @@ export function RemindersPanel() {
   });
 
   return (
-    <div className="mx-auto max-w-md px-4 pb-36 pt-6">
+    <div className="mx-auto max-w-md px-4 pb-36 pt-6 tablet:max-w-4xl tablet:px-6 tablet:pb-24 tablet:pt-8 lg:max-w-6xl lg:px-8 lg:pb-14 lg:pt-10">
       <header className="mb-6">
         <p className="font-display text-xs font-semibold uppercase tracking-widest text-coral-500">
           {t("reminders_h")}
@@ -39,11 +39,11 @@ export function RemindersPanel() {
           <p className="text-sm text-ink-700">{t("sched_empty")}</p>
         </div>
       ) : (
-        <ul className="flex flex-col gap-3">
+        <ul className="stagger-list grid grid-cols-1 gap-3 tablet:grid-cols-2 xl:grid-cols-3">
           {sorted.map((r) => (
             <li
               key={r.id}
-              className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-mist-200"
+              className="token-card hover-depth rounded-2xl bg-white p-4 ring-1 ring-mist-200"
             >
               <p className="text-xs font-semibold uppercase tracking-wide text-sea-600">
                 {formatWhen(r.scheduledAt, t("time_na"))}

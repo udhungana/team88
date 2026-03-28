@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { generateConversationStarters } from "@/lib/starters";
+import { fetchFirstConversationStarters, isOpenAiConfigured } from "@/lib/openai";
 import type { ConversationStarter, FirstConversationInputs } from "@/types";
 import { useApp } from "@/context/AppContext";
 import { useT } from "@/i18n/useT";
@@ -8,25 +9,52 @@ const OUTPUT_LANGS = ["English", "Nepali", "Spanish", "Hindi", "French", "Arabic
 
 export function FirstConversation() {
   const { t } = useT();
-  const { addReminder, firstConvo: fc, patchFirstConvo } = useApp();
+  const { addReminder, firstConvo: fc, patchFirstConvo, currentUser } = useApp();
   const [toast, setToast] = useState<string | null>(null);
+  const [generating, setGenerating] = useState(false);
+
+  useEffect(() => {
+    if (currentUser?.appLanguage === "ne" && fc.language !== "Nepali") {
+      patchFirstConvo({ language: "Nepali" });
+    }
+  }, [currentUser?.appLanguage, fc.language, patchFirstConvo]);
 
   const goPlan = () => patchFirstConvo({ phase: "plan" });
   const goFeel = () => patchFirstConvo({ phase: "feel" });
 
-  const goResults = () => {
+  const goResults = async () => {
+    const selectedLanguage =
+      currentUser?.appLanguage === "ne" ? "Nepali" : fc.language;
+
     const input: FirstConversationInputs = {
       feeling: fc.feeling,
       audience: fc.audience,
       topics: fc.topics,
-      language: fc.language,
+      language: selectedLanguage,
       cultureRegion: fc.cultureRegion,
       timePreference: fc.timePreference,
     };
-    patchFirstConvo({
-      starters: generateConversationStarters(input),
-      phase: "results",
-    });
+
+    setGenerating(true);
+    try {
+      const starters = isOpenAiConfigured()
+        ? await fetchFirstConversationStarters(input)
+        : generateConversationStarters(input);
+
+      patchFirstConvo({
+        starters,
+        phase: "results",
+      });
+    } catch {
+      patchFirstConvo({
+        starters: generateConversationStarters(input),
+        phase: "results",
+      });
+      setToast("AI unavailable. Showing template starters.");
+      setTimeout(() => setToast(null), 2500);
+    } finally {
+      setGenerating(false);
+    }
   };
 
   const scheduleStub = (starter: ConversationStarter) => {
@@ -39,12 +67,18 @@ export function FirstConversation() {
       starterSummary: starter.text.slice(0, 200) + (starter.text.length > 200 ? "…" : ""),
       scheduledAt: fc.reminderWhen,
     });
+
+    patchFirstConvo({
+      starters: fc.starters.filter((s) => s.id !== starter.id),
+      expandedId: fc.expandedId === starter.id ? null : fc.expandedId,
+    });
+
     setToast(t("toast_remind"));
     setTimeout(() => setToast(null), 2800);
   };
 
   return (
-    <div className="mx-auto max-w-md px-4 pb-32 pt-6">
+    <div className="mx-auto max-w-md px-4 pb-32 pt-6 tablet:max-w-4xl tablet:px-6 tablet:pb-22 tablet:pt-8 lg:max-w-6xl lg:px-8 lg:pb-14 lg:pt-10">
       <header className="mb-6">
         <p className="font-display text-xs font-semibold uppercase tracking-widest text-coral-500">
           {t("first_word")}
@@ -54,7 +88,7 @@ export function FirstConversation() {
       </header>
 
       {fc.phase === "feel" && (
-        <div className="space-y-4 rounded-3xl bg-white p-5 shadow-soft ring-1 ring-mist-200">
+        <div className="section-fade space-y-4 rounded-3xl bg-white p-5 shadow-soft ring-1 ring-mist-200 tablet:grid tablet:grid-cols-2 tablet:gap-4 tablet:space-y-0 lg:gap-5 lg:p-6">
           <label className="block">
             <span className="text-sm font-medium text-ink-800">{t("what_feeling")}</span>
             <textarea
@@ -65,7 +99,7 @@ export function FirstConversation() {
               placeholder={t("feeling_long_ph")}
             />
           </label>
-          <div>
+          <div className="lg:flex lg:flex-col lg:justify-between">
             <p className="text-sm font-medium text-ink-800">{t("who_talk")}</p>
             <div className="mt-2 grid grid-cols-3 gap-2">
               {(
@@ -91,7 +125,7 @@ export function FirstConversation() {
           <button
             type="button"
             onClick={goPlan}
-            className="w-full rounded-2xl bg-ink-900 py-3.5 text-sm font-semibold text-white"
+            className="w-full rounded-2xl bg-ink-900 py-3.5 text-sm font-semibold text-white lg:col-span-2"
           >
             {t("plan_talk")}
           </button>
@@ -99,7 +133,7 @@ export function FirstConversation() {
       )}
 
       {fc.phase === "plan" && (
-        <div className="space-y-4 rounded-3xl bg-white p-5 shadow-soft ring-1 ring-mist-200">
+        <div className="section-fade space-y-4 rounded-3xl bg-white p-5 shadow-soft ring-1 ring-mist-200 tablet:grid tablet:grid-cols-2 tablet:gap-4 tablet:space-y-0 lg:p-6">
           <p className="font-display text-lg font-semibold text-ink-950">{t("plan_your")}</p>
           <label className="block">
             <span className="text-sm font-medium text-ink-800">{t("usual_topics")}</span>
@@ -146,7 +180,7 @@ export function FirstConversation() {
               <option value="tomorrow">{t("tomorrow")}</option>
             </select>
           </label>
-          <div className="flex gap-2">
+          <div className="flex gap-2 lg:col-span-2">
             <button
               type="button"
               onClick={goFeel}
@@ -156,17 +190,18 @@ export function FirstConversation() {
             </button>
             <button
               type="button"
-              onClick={goResults}
+              onClick={() => void goResults()}
+              disabled={generating}
               className="flex-[2] rounded-2xl bg-sea-500 py-3 text-sm font-semibold text-white"
             >
-              {t("get_starters")}
+              {generating ? "Generating..." : t("get_starters")}
             </button>
           </div>
         </div>
       )}
 
       {fc.phase === "results" && (
-        <div className="space-y-3">
+        <div className="section-fade space-y-3 lg:space-y-4">
           <button
             type="button"
             onClick={() => patchFirstConvo({ phase: "plan" })}
@@ -188,11 +223,11 @@ export function FirstConversation() {
             </label>
           </div>
 
-          <ul className="flex flex-col gap-3">
+          <ul className="stagger-list grid grid-cols-1 gap-3 tablet:grid-cols-2">
             {fc.starters.map((s) => (
               <li
                 key={s.id}
-                className="rounded-3xl bg-white p-4 shadow-sm ring-1 ring-mist-200"
+                className="token-card hover-depth rounded-3xl bg-white p-4 ring-1 ring-mist-200"
               >
                 <p
                   className={`text-sm leading-relaxed text-ink-900 ${

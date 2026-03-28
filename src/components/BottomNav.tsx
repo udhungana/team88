@@ -3,8 +3,13 @@ import { useT } from "@/i18n/useT";
 import { useApp } from "@/context/AppContext";
 
 export function BottomNav() {
-  const { tab, setTab } = useApp();
+  const { tab, setTab, logout } = useApp();
   const { t } = useT();
+
+  const confirmAndLogout = () => {
+    const ok = window.confirm(t("logout_confirm"));
+    if (ok) logout();
+  };
 
   const Item = ({
     id,
@@ -37,7 +42,7 @@ export function BottomNav() {
   };
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-mist-200 bg-white/95 pb-[max(0.4rem,env(safe-area-inset-bottom))] pt-1 shadow-nav backdrop-blur-md">
+    <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-mist-200 bg-white/95 pb-[max(0.4rem,env(safe-area-inset-bottom))] pt-1 shadow-nav backdrop-blur-md lg:hidden">
       <div className="mx-auto flex max-w-2xl px-0.5">
         <Item
           id="first"
@@ -109,6 +114,26 @@ export function BottomNav() {
             </svg>
           }
         />
+
+        <button
+          type="button"
+          onClick={confirmAndLogout}
+          className="flex flex-1 flex-col items-center gap-0.5 py-1 text-[9px] font-semibold leading-tight text-ink-700 transition sm:text-[10px]"
+        >
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-transparent text-ink-700 transition sm:h-9 sm:w-9 sm:rounded-xl">
+            <svg className="h-4 w-4 sm:h-5 sm:w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+              />
+            </svg>
+          </span>
+          {t("logout")}
+        </button>
+
+
       </div>
     </nav>
   );

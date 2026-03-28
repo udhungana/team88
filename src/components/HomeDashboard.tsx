@@ -45,21 +45,20 @@ export function HomeDashboard() {
     sendInvite,
     invites,
     threads,
-    updateMood,
-    refreshMatches,
   } = useApp();
   const [idx, setIdx] = useState(4);
   const idxRef = useRef(idx);
   idxRef.current = idx;
   const [typedMood, setTypedMood] = useState("");
   const [toast, setToast] = useState<string | null>(null);
-  const [matchUpdating, setMatchUpdating] = useState(false);
   const [skippedIds, setSkippedIds] = useState<Set<string>>(() => new Set());
   const [dragX, setDragX] = useState(0);
   const dragXRef = useRef(0);
   const [isDragging, setIsDragging] = useState(false);
   const dragStartX = useRef(0);
   const dragging = useRef(false);
+  const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
+
 
   const emoji = MOOD_EMOJIS[idx] ?? MOOD_EMOJIS[1]!;
   const moodLabel = t(MOOD_LABEL_KEYS[idx] ?? "mood_good");
@@ -89,10 +88,10 @@ export function HomeDashboard() {
   );
 
   const rankedList = useMemo(() => {
-    const mt = currentUser?.moodText?.trim() ?? "";
-    if (!mt) return baseList;
-    return rankPeersByMood(baseList, mt);
-  }, [baseList, currentUser?.moodText]);
+    const signal = typedMood.trim() || moodLabel;
+    if (!signal.trim()) return baseList;
+    return rankPeersByMood(baseList, signal);
+  }, [baseList, typedMood, moodLabel]);
 
   const queue = useMemo(
     () => rankedList.filter((p) => !skippedIds.has(p.id)),
@@ -106,30 +105,6 @@ export function HomeDashboard() {
   const showToast = (msg: string) => {
     setToast(msg);
     setTimeout(() => setToast(null), 2400);
-  };
-
-  const submitMood = () => {
-    const text = typedMood.trim();
-    const hasTyped = text.length > 0;
-    const moodIndex = hasTyped ? inferMoodEmojiIndex(text, idx) : idx;
-    const moodEmoji = MOOD_EMOJIS[moodIndex] ?? MOOD_EMOJIS[1]!;
-
-    if (hasTyped) {
-      setIdx(moodIndex);
-      setMatchUpdating(true);
-      setSkippedIds(new Set());
-      window.setTimeout(() => {
-        updateMood(moodEmoji, text);
-        refreshMatches();
-        setMatchUpdating(false);
-        showToast(t("toast_mood_typed"));
-      }, 850);
-    } else {
-      updateMood(moodEmoji, text);
-      refreshMatches();
-      setSkippedIds(new Set());
-      showToast(t("toast_mood"));
-    }
   };
 
   const invite = useCallback(
@@ -150,7 +125,7 @@ export function HomeDashboard() {
   );
 
   const onPointerDown = (e: React.PointerEvent) => {
-    if (!top || matchUpdating) return;
+    if (!top || window.innerWidth >= 1024) return; // Disable swipe on desktop
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     dragging.current = true;
     setIsDragging(true);
@@ -160,7 +135,7 @@ export function HomeDashboard() {
   };
 
   const onPointerMove = (e: React.PointerEvent) => {
-    if (!dragging.current || !top) return;
+    if (!dragging.current || !top || window.innerWidth >= 1024) return; // Disable swipe on desktop
     const x = e.clientX - dragStartX.current;
     dragXRef.current = x;
     setDragX(x);
@@ -196,16 +171,47 @@ export function HomeDashboard() {
     endDrag();
   };
 
+  const changeMoodPrev = () => {
+    setIdx((i) => (i - 1 + MOOD_EMOJIS.length) % MOOD_EMOJIS.length);
+    setTypedMood("");
+  };
+
+  const changeMoodNext = () => {
+    setIdx((i) => (i + 1) % MOOD_EMOJIS.length);
+    setTypedMood("");
+  };
+
+  const onCardClick = () => {
+    if (top) {
+      setSelectedCardId(selectedCardId === top.id ? null : top.id);
+    }
+  };
+
+  const handleConnect = () => {
+    if (top) {
+      invite(top.id, top.username);
+      setSelectedCardId(null);
+    }
+  };
+
+  const handlePass = () => {
+    if (top) {
+      passPeer(top.id);
+      setSelectedCardId(null);
+    }
+  };
+
   useEffect(() => {
     dragXRef.current = 0;
     setDragX(0);
+    setSelectedCardId(null);
   }, [top?.id]);
 
   if (!currentUser) return null;
 
   return (
-    <div className="mx-auto max-w-md px-4 pb-36 pt-6">
-      <header className="mb-6">
+    <div className="mx-auto max-w-md px-4 pb-36 pt-6 tablet:max-w-3xl tablet:px-6 tablet:pb-24 tablet:pt-8 lg:max-w-6xl lg:px-8 lg:pb-14 lg:pt-10">
+      <header className="mb-6 lg:mb-8">
         <p className="font-display text-xs font-semibold uppercase tracking-widest text-coral-500">
           {t("dashboard")}
         </p>
@@ -215,112 +221,142 @@ export function HomeDashboard() {
         <p className="mt-1 text-sm text-ink-700">{t("dash_sub")}</p>
       </header>
 
-      <section className="rounded-3xl bg-white p-5 shadow-soft ring-1 ring-mist-200">
-        <p className="text-center text-sm font-semibold text-ink-800">{t("mood")}</p>
-        <div className="mt-4 flex items-center justify-center gap-6">
-          <button
-            type="button"
-            aria-label={t("mood_prev")}
-            onClick={() => setIdx((i) => (i - 1 + MOOD_EMOJIS.length) % MOOD_EMOJIS.length)}
-            className="flex h-11 w-11 items-center justify-center rounded-2xl bg-mist-100 text-ink-800 transition hover:bg-mist-200"
-          >
-            ‹
-          </button>
-          <div className="flex flex-col items-center">
-            <div className="text-6xl leading-none">{emoji}</div>
-            <p className="mt-2 max-w-[14rem] text-center text-xs font-medium leading-snug text-ink-700">
-              {moodLabel}
-            </p>
-          </div>
-          <button
-            type="button"
-            aria-label={t("mood_next")}
-            onClick={() => setIdx((i) => (i + 1) % MOOD_EMOJIS.length)}
-            className="flex h-11 w-11 items-center justify-center rounded-2xl bg-mist-100 text-ink-800 transition hover:bg-mist-200"
-          >
-            ›
-          </button>
-        </div>
-        <label className="mt-4 block">
-          <span className="text-xs font-medium text-ink-700">{t("mood_type")}</span>
-          <input
-            className="mt-1 w-full rounded-2xl border border-mist-200 px-4 py-3 text-sm outline-none ring-sea-500/30 focus:ring-2"
-            value={typedMood}
-            onChange={(e) => setTypedMood(e.target.value)}
-            placeholder={t("mood_type_ph")}
-          />
-        </label>
-        <button
-          type="button"
-          onClick={submitMood}
-          disabled={matchUpdating}
-          className="mt-4 w-full rounded-2xl bg-sea-500 py-3.5 text-sm font-semibold text-white shadow-sm transition hover:bg-sea-600 disabled:opacity-60"
-        >
-          {matchUpdating ? t("updating_matches") : t("submit_mood")}
-        </button>
-        {currentUser.lastMoodSubmittedAt && (
-          <p className="mt-2 text-center text-[11px] text-ink-700">{t("last_checkin")}</p>
-        )}
-      </section>
-
-      <section className="mt-8">
-        <h3 className="font-display text-lg font-semibold text-ink-950">{t("people_vibe")}</h3>
-        <p className="text-xs text-ink-700">{t("swipe_hint")}</p>
-
-        {matchUpdating && (
-          <div className="mt-4 rounded-2xl bg-sea-500/10 px-4 py-3 text-center text-sm font-medium text-sea-800 ring-1 ring-sea-500/20">
-            {t("rerank")}
-          </div>
-        )}
-
-        <div className="relative mx-auto mt-4 min-h-[26rem] max-w-sm pt-10">
-          {back && <StackCard peer={back} depth={2} t={t} />}
-          {mid && <StackCard peer={mid} depth={1} t={t} />}
-          {top ? (
-            <div
-              role="application"
-              aria-label={t("swipe_aria")}
-              className="touch-pan-y"
-              onPointerDown={onPointerDown}
-              onPointerMove={onPointerMove}
-              onPointerUp={onPointerUp}
-              onPointerCancel={onPointerUp}
+      <div className="tablet:grid tablet:grid-cols-1 tablet:gap-5 tablet:items-start lg:gap-7">
+        <section className="token-panel section-fade rounded-3xl bg-white p-5 ring-1 ring-mist-200 lg:p-6">
+          <p className="text-center text-sm font-semibold text-ink-800">{t("mood")}</p>
+          <div className="mt-4 flex items-center justify-center">
+            <button
+              type="button"
+              onClick={changeMoodPrev}
+              className="flex h-10 w-10 items-center justify-center rounded-xl hover:bg-mist-200 transition text-ink-600"
+              aria-label="Previous mood"
             >
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+            <div className="flex flex-col items-center px-4">
               <div
-                className={`relative z-20 mx-auto max-w-sm select-none ${!isDragging && dragX === 0 ? "transition-transform duration-200 ease-out" : ""}`}
-                style={{
-                  transform: `translateX(${dragX}px) rotate(${dragX * 0.04}deg)`,
-                }}
+                role="img"
+                aria-label={moodLabel}
+                className="select-none rounded-3xl bg-mist-100 px-8 py-5 text-6xl leading-none ring-1 ring-mist-200"
               >
-                <PeerCardContent peer={top} />
-                <div className="pointer-events-none absolute inset-0 flex justify-between px-2 pt-2">
-                  <span
-                    className={`rounded-lg bg-red-500/90 px-2 py-1 text-[10px] font-bold uppercase text-white transition-opacity ${dragX < -40 ? "opacity-100" : "opacity-0"}`}
-                  >
-                    {t("pass")}
-                  </span>
-                  <span
-                    className={`rounded-lg bg-sea-500/90 px-2 py-1 text-[10px] font-bold uppercase text-white transition-opacity ${dragX > 40 ? "opacity-100" : "opacity-0"}`}
-                  >
-                    {t("connect")}
-                  </span>
-                </div>
+                {emoji}
               </div>
+              <p className="mt-2 max-w-[14rem] text-center text-xs font-medium leading-snug text-ink-700">
+                {moodLabel}
+              </p>
             </div>
-          ) : (
-            <p className="rounded-2xl bg-white p-6 text-center text-sm text-ink-700 ring-1 ring-mist-200">
-              {rankedList.length === 0 ? t("empty_all") : t("empty_passed")}
-            </p>
-          )}
-        </div>
-
-        {top && (
-          <div className="mt-4 flex justify-center gap-6 text-[11px] text-ink-600">
-            <span>{t("swipe_hint_lr")}</span>
-            <span>{t("swipe_hint_rl")}</span>
+            <button
+              type="button"
+              onClick={changeMoodNext}
+              className="flex h-10 w-10 items-center justify-center rounded-xl hover:bg-mist-200 transition text-ink-600"
+              aria-label="Next mood"
+            >
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
           </div>
-        )}
-      </section>
+
+          <label className="mt-4 block">
+            <span className="text-xs font-medium text-ink-700">{t("mood_type")}</span>
+            <input
+              className="mt-1 w-full rounded-2xl border border-mist-200 px-4 py-3 text-sm outline-none ring-sea-500/30 focus:ring-2"
+              value={typedMood}
+              onChange={(e) => setTypedMood(e.target.value)}
+              placeholder={t("mood_type_ph")}
+            />
+          </label>
+
+          <div className="mt-8 border-t border-mist-200 pt-6">
+            <h3 className="font-display text-lg font-semibold text-ink-950">{t("people_vibe")}</h3>
+            <p className="text-xs text-ink-700 lg:hidden">{t("swipe_hint")}</p>
+            <p className="hidden lg:block text-xs text-ink-700 mt-1">Click a card to connect or pass</p>
+
+            <div className="relative mx-auto mt-4 min-h-[30rem] max-w-md pt-8 lg:max-w-2xl lg:min-h-[38rem] lg:pt-10">
+              {back && <StackCard peer={back} depth={2} t={t} />}
+              {mid && <StackCard peer={mid} depth={1} t={t} />}
+              {top ? (
+                <div
+                  role="application"
+                  aria-label={t("swipe_aria")}
+                  className="touch-pan-y lg:cursor-pointer relative"
+                  onPointerDown={onPointerDown}
+                  onPointerMove={onPointerMove}
+                  onPointerUp={onPointerUp}
+                  onPointerCancel={onPointerUp}
+                  onClick={onCardClick}
+                >
+                  <div
+                    className={`relative z-20 mx-auto max-w-md select-none ${!isDragging && dragX === 0 ? "transition-transform duration-200 ease-out" : ""}`}
+                    style={{
+                      transform: `translateX(${dragX}px) rotate(${dragX * 0.04}deg)`,
+                    }}
+                  >
+                    <PeerCardContent peer={top} />
+                    {/* Mobile: Show labels on swipe */}
+                    <div className="pointer-events-none absolute inset-0 flex justify-between px-2 pt-2 lg:hidden">
+                      <span
+                        className={`rounded-lg bg-red-500/90 px-2 py-1 text-[10px] font-bold uppercase text-white transition-opacity ${dragX < -40 ? "opacity-100" : "opacity-0"}`}
+                      >
+                        {t("pass")}
+                      </span>
+                      <span
+                        className={`rounded-lg bg-sea-500/90 px-2 py-1 text-[10px] font-bold uppercase text-white transition-opacity ${dragX > 40 ? "opacity-100" : "opacity-0"}`}
+                      >
+                        {t("connect")}
+                      </span>
+                    </div>
+                    {/* Desktop: Show buttons on click */}
+                    {selectedCardId === top.id && (
+                      <div className="pointer-events-auto hidden lg:flex absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-full items-center justify-center gap-3 mt-4 z-30">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handlePass();
+                          }}
+                          className="flex items-center gap-2 rounded-2xl bg-red-500 px-4 py-2 text-xs font-bold uppercase text-white transition hover:bg-red-600 shadow-lg"
+                        >
+                          <span>✕</span>
+                          {t("pass")}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleConnect();
+                          }}
+                          className="flex items-center gap-2 rounded-2xl bg-sea-500 px-4 py-2 text-xs font-bold uppercase text-white transition hover:bg-sea-600 shadow-lg"
+                        >
+                          <span>♥</span>
+                          {t("connect")}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <p className="token-card rounded-2xl bg-white p-6 text-center text-sm text-ink-700 ring-1 ring-mist-200">
+                  {rankedList.length === 0 ? t("empty_all") : t("empty_passed")}
+                </p>
+              )}
+            </div>
+
+            {top && (
+              <div className="mt-4 flex justify-center gap-6 text-[11px] text-ink-600 lg:hidden">
+                <span>{t("swipe_hint_lr")}</span>
+                <span>{t("swipe_hint_rl")}</span>
+              </div>
+            )}
+          </div>
+
+          {currentUser.lastMoodSubmittedAt && (
+            <p className="mt-4 text-center text-[11px] text-ink-700">{t("last_checkin")}</p>
+          )}
+        </section>
+      </div>
 
       {toast && (
         <div className="fixed bottom-32 left-1/2 z-50 max-w-[90vw] -translate-x-1/2 rounded-full bg-ink-900 px-4 py-2 text-center text-xs font-medium text-white shadow-lg">
@@ -354,23 +390,23 @@ function StackCard({
       }}
       aria-hidden
     >
-      <div className="mx-auto max-w-sm rounded-3xl bg-white p-5 shadow-md ring-1 ring-mist-200">
+      <div className="token-card hover-depth mx-auto max-w-md rounded-3xl bg-white p-6 ring-1 ring-mist-200">
         <div className="flex items-center gap-3">
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-mist-100 text-3xl">
+          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-mist-100 text-4xl">
             {peer.moodEmoji}
           </div>
           <div>
-            <p className="font-semibold text-ink-950">@{peer.username}</p>
-            <p className="text-xs text-ink-600">{depth === 2 ? t("stack_pos") : t("next_stack")}</p>
+            <p className="font-semibold text-sm text-ink-950">@{peer.username}</p>
+            <p className="text-[11px] text-ink-600">{depth === 2 ? t("stack_pos") : t("next_stack")}</p>
           </div>
         </div>
-        <div className="mt-3 flex flex-wrap gap-1">
+        <div className="mt-4 flex flex-wrap gap-1.5">
           {peer.tags.slice(0, 6).map((tag) => {
             const hit = peer.matchedTags.some((m) => m.toLowerCase() === tag.toLowerCase());
             return (
               <span
                 key={tag}
-                className={`rounded-full px-2 py-0.5 text-[10px] ${
+                className={`rounded-full px-2.5 py-0.5 text-[11px] font-medium ${
                   hit ? "bg-sage-500/20 text-sage-700" : "bg-mist-100 text-ink-600"
                 }`}
               >
@@ -384,34 +420,52 @@ function StackCard({
   );
 }
 
+function generateConsistentMatchPercentage(peerId: string): number {
+  // Generate a consistent but random-looking percentage based on peer ID
+  let hash = 0;
+  for (let i = 0; i < peerId.length; i++) {
+    const char = peerId.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32bit integer
+  }
+  // Map hash to percentage between 62-98%
+  const percentage = 62 + (Math.abs(hash) % 37);
+  return percentage;
+}
+
 function PeerCardContent({ peer }: { peer: ScoredPeer }) {
+  const matchPercent = generateConsistentMatchPercentage(peer.id);
   return (
-    <div className="mx-auto max-w-sm cursor-grab active:cursor-grabbing rounded-3xl bg-white p-5 shadow-soft ring-1 ring-mist-200">
-      <div className="flex items-center gap-3">
-        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-mist-100 text-3xl">
+    <div className="token-card hover-depth mx-auto max-w-xl cursor-grab active:cursor-grabbing rounded-3xl bg-white p-7 ring-1 ring-mist-200 lg:p-8">
+      <div className="flex items-start gap-4">
+        <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl bg-mist-100 text-5xl">
           {peer.moodEmoji}
         </div>
-        <div className="min-w-0">
-          <p className="truncate font-semibold text-ink-950">@{peer.username}</p>
-          <p className="line-clamp-2 text-xs text-ink-700">{peer.feelingSnippet}</p>
+        <div className="min-w-0 flex-1">
+          <p className="truncate font-semibold text-xl text-ink-950">@{peer.username}</p>
+          <p className="mt-1 text-sm font-medium text-sea-600">{matchPercent}% Match</p>
+          <p className="line-clamp-3 text-sm text-ink-700 mt-2">{peer.feelingSnippet}</p>
         </div>
       </div>
-      <div className="mt-4 flex flex-wrap gap-1.5">
-        {peer.tags.map((tag) => {
-          const hit = peer.matchedTags.some((m) => m.toLowerCase() === tag.toLowerCase());
-          return (
-            <span
-              key={tag}
-              className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
-                hit
-                  ? "bg-sage-500/20 text-sage-600 ring-1 ring-sage-500/30"
-                  : "bg-mist-100 text-ink-700"
-              }`}
-            >
-              {tag}
-            </span>
-          );
-        })}
+      <div className="mt-6 pt-5 border-t border-mist-100">
+        <p className="text-xs font-semibold text-ink-600 mb-3">Interests & Tags</p>
+        <div className="flex flex-wrap gap-2">
+          {peer.tags.map((tag) => {
+            const hit = peer.matchedTags.some((m) => m.toLowerCase() === tag.toLowerCase());
+            return (
+              <span
+                key={tag}
+                className={`rounded-full px-3 py-1.5 text-sm font-medium transition ${
+                  hit
+                    ? "bg-sage-500/15 text-sage-700 ring-1.5 ring-sage-500/40"
+                    : "bg-mist-100 text-ink-700"
+                }`}
+              >
+                {tag}
+              </span>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
