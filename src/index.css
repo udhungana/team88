@@ -1,0 +1,27 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+html {
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  @apply bg-mist-100 text-ink-900 min-h-dvh font-sans;
+}
+
+#root {
+  @apply min-h-dvh;
+}
+
+html.lang-ne {
+  font-family: "Noto Sans Devanagari", "DM Sans", system-ui, sans-serif;
+}
+
+html.lang-ne .font-display {
+  font-family: "Noto Sans Devanagari", "Outfit", system-ui, sans-serif;
+}
