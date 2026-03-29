@@ -1,4 +1,10 @@
-const KEY = "together-mvp-v1";
+const KEY = "vibespace-v1";
+const CREDENTIALS_KEY = "vibespace-credentials-v1";
+
+export type CredentialsShape = {
+  username: string;
+  password: string;
+};
 
 export type PersistShape = {
   currentUser: import("@/types").CurrentUser | null;
@@ -38,4 +44,26 @@ export function savePersist(data: PersistShape) {
 
 export function clearPersist() {
   localStorage.removeItem(KEY);
+}
+
+export function saveCredentials(creds: CredentialsShape) {
+  localStorage.setItem(CREDENTIALS_KEY, JSON.stringify(creds));
+}
+
+export function loadCredentials(): CredentialsShape | null {
+  try {
+    const raw = localStorage.getItem(CREDENTIALS_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as CredentialsShape;
+    if (parsed.username && parsed.password) {
+      return parsed;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+export function clearCredentials() {
+  localStorage.removeItem(CREDENTIALS_KEY);
 }

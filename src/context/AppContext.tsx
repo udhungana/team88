@@ -9,7 +9,7 @@ import {
 } from "react";
 import { MOCK_PEERS } from "@/data/mockUsers";
 import { defaultFirstConvo } from "@/lib/firstConvoDefaults";
-import { clearPersist, loadPersist, savePersist } from "@/lib/storage";
+import { clearPersist, loadPersist, savePersist, clearCredentials, loadCredentials } from "@/lib/storage";
 import { scorePeers } from "@/lib/match";
 import { scanMessage } from "@/lib/safety";
 import type {
@@ -34,9 +34,11 @@ function migrateUser(raw: CurrentUser | null): CurrentUser | null {
 function mergeFirstConvo(raw?: Partial<FirstConvoPersist>): FirstConvoPersist {
   const d = defaultFirstConvo();
   if (!raw) return d;
+  const audience = raw.audience === "family" || raw.audience === "friends" ? raw.audience : d.audience;
   return {
     ...d,
     ...raw,
+    audience,
     starters: Array.isArray(raw.starters) ? raw.starters : d.starters,
   };
 }
@@ -57,10 +59,12 @@ type AppCtx = {
   openThread: (threadId: string) => void;
   closeThread: () => void;
   sendChatMessage: (threadId: string, text: string, flags?: SafetyFlag[]) => void;
+  sendPeerChatMessage: (threadId: string, text: string) => void;
   scoredPeers: ReturnType<typeof scorePeers>;
   refreshMatches: () => void;
   scheduledReminders: ScheduledReminder[];
   addReminder: (r: Omit<ScheduledReminder, "id" | "createdAt">) => void;
+  deleteReminder: (id: string) => void;
   updateMood: (emoji: string, text: string) => void;
   firstConvo: FirstConvoPersist;
   patchFirstConvo: (p: Partial<FirstConvoPersist>) => void;
@@ -70,6 +74,24 @@ const Ctx = createContext<AppCtx | null>(null);
 
 function newId() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+}
+
+function createUserFromCredentials(username: string, password: string): CurrentUser {
+  return {
+    id: `u-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    displayMode: "anonymous",
+    displayName: username,
+    username,
+    password,
+    tags: ["wellness", "community"],
+    feelingText: "Looking to connect",
+    ethnicity: "prefer not to say",
+    region: "us",
+    moodEmoji: "🙂",
+    moodText: "",
+    lastMoodSubmittedAt: null,
+    appLanguage: "en",
+  };
 }
 
 export function AppProvider({ children }: { children: ReactNode }) {
@@ -84,10 +106,29 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const p = loadPersist();
-    setCurrentUserState(migrateUser(p.currentUser));
+    const loadedUser = migrateUser(p.currentUser);
+    
+    if (loadedUser) {
+      // User data exists, use it
+      setCurrentUserState(loadedUser);
+    } else {
+      // No user data, check for saved credentials
+      const savedCreds = loadCredentials();
+      if (savedCreds) {
+        // Auto-login with saved credentials
+        const autoUser = createUserFromCredentials(savedCreds.username, savedCreds.password);
+        setCurrentUserState(migrateUser(autoUser));
+      }
+    }
+    
     setInvites(p.invites);
     setThreads(p.threads);
-    setScheduledReminders(p.scheduledReminders);
+    setScheduledReminders(
+      p.scheduledReminders.map((r) => ({
+        ...r,
+        audience: r.audience === "family" || r.audience === "friends" ? r.audience : undefined,
+      }))
+    );
     setFirstConvo(mergeFirstConvo(p.firstConvo));
   }, []);
 
@@ -115,6 +156,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const logout = useCallback(() => {
     clearPersist();
+    clearCredentials();
     setCurrentUserState(null);
     setInvites([]);
     setThreads([]);
@@ -200,11 +242,30 @@ export function AppProvider({ children }: { children: ReactNode }) {
     );
   }, []);
 
+  const sendPeerChatMessage = useCallback((threadId: string, text: string) => {
+    const msg: ChatMessage = {
+      id: newId(),
+      threadId,
+      fromSelf: false,
+      text,
+      sentAt: new Date().toISOString(),
+    };
+    setThreads((prev) =>
+      prev.map((t) =>
+        t.id === threadId ? { ...t, messages: [...t.messages, msg] } : t
+      )
+    );
+  }, []);
+
   const addReminder = useCallback((r: Omit<ScheduledReminder, "id" | "createdAt">) => {
     setScheduledReminders((prev) => [
       ...prev,
       { ...r, id: newId(), createdAt: new Date().toISOString() },
     ]);
+  }, []);
+
+  const deleteReminder = useCallback((id: string) => {
+    setScheduledReminders((prev) => prev.filter((r) => r.id !== id));
   }, []);
 
   const updateMood = useCallback((emoji: string, text: string) => {
@@ -238,10 +299,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
       openThread,
       closeThread,
       sendChatMessage,
+      sendPeerChatMessage,
       scoredPeers,
       refreshMatches,
       scheduledReminders,
       addReminder,
+      deleteReminder,
       updateMood,
       firstConvo,
       patchFirstConvo,
@@ -261,10 +324,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
       openThread,
       closeThread,
       sendChatMessage,
+      sendPeerChatMessage,
       scoredPeers,
       refreshMatches,
       scheduledReminders,
       addReminder,
+      deleteReminder,
       updateMood,
       firstConvo,
       patchFirstConvo,

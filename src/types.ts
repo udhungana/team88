@@ -68,7 +68,7 @@ export type Thread = {
 
 export type FirstConversationInputs = {
   feeling: string;
-  audience: "family" | "friends" | "stranger";
+  audience: "family" | "friends";
   topics: string;
   language: string;
   cultureRegion: string;
@@ -86,6 +86,7 @@ export type ScheduledReminder = {
   label: string;
   starterSummary: string;
   createdAt: string;
+  audience?: FirstConversationInputs["audience"];
   /** ISO local datetime string from `<input type="datetime-local" />` */
   scheduledAt?: string;
 };

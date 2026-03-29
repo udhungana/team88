@@ -1,0 +1,32 @@
+<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background circle -->
+  <circle cx="100" cy="100" r="95" fill="#f0f4f8" stroke="#e5eef7" stroke-width="2"/>
+  
+  <!-- Two overlapping cards representing connection -->
+  <g transform="translate(60, 75)">
+    <!-- Left card tilted -->
+    <rect x="0" y="0" width="45" height="55" rx="8" fill="#06b6d4" opacity="0.9" transform="rotate(-15 22.5 27.5)"/>
+    <circle cx="22.5" cy="15" r="5" fill="#ffffff" opacity="0.6"/>
+    <line x1="10" y1="28" x2="35" y2="28" stroke="#ffffff" stroke-width="1.5" opacity="0.4"/>
+    <line x1="10" y1="35" x2="35" y2="35" stroke="#ffffff" stroke-width="1.5" opacity="0.4"/>
+  </g>
+  
+  <g transform="translate(95, 75)">
+    <!-- Right card tilted opposite -->
+    <rect x="0" y="0" width="45" height="55" rx="8" fill="#0ea5e9" opacity="0.9" transform="rotate(15 22.5 27.5)"/>
+    <circle cx="22.5" cy="15" r="5" fill="#ffffff" opacity="0.6"/>
+    <line x1="10" y1="28" x2="35" y2="28" stroke="#ffffff" stroke-width="1.5" opacity="0.4"/>
+    <line x1="10" y1="35" x2="35" y2="35" stroke="#ffffff" stroke-width="1.5" opacity="0.4"/>
+  </g>
+  
+  <!-- Mood emoji circle in center -->
+  <circle cx="100" cy="100" r="28" fill="#ffffff" stroke="#06b6d4" stroke-width="2"/>
+  <text x="100" y="110" font-size="32" text-anchor="middle" dominant-baseline="middle">💙</text>
+  
+  <!-- Pulse rings to represent connection/vibes -->
+  <circle cx="100" cy="100" r="50" fill="none" stroke="#06b6d4" stroke-width="1.5" opacity="0.3"/>
+  <circle cx="100" cy="100" r="65" fill="none" stroke="#0ea5e9" stroke-width="1" opacity="0.2"/>
+  
+  <!-- App name underneath (optional) -->
+  <text x="100" y="170" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="600" text-anchor="middle" fill="#1a2332">vibespace</text>
+</svg>

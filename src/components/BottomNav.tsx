@@ -3,17 +3,20 @@ import { useT } from "@/i18n/useT";
 import { useApp } from "@/context/AppContext";
 
 export function BottomNav() {
-  const { tab, setTab } = useApp();
+  const { tab, setTab, invites } = useApp();
   const { t } = useT();
+  const pendingInvites = invites.filter((i) => i.status === "pending").length;
 
   const Item = ({
     id,
     labelKey,
     icon,
+    badgeCount,
   }: {
     id: "first" | "home" | "reminders" | "connections" | "profile";
     labelKey: string;
     icon: ReactNode;
+    badgeCount?: number;
   }) => {
     const active = tab === id;
     return (
@@ -25,11 +28,16 @@ export function BottomNav() {
         }`}
       >
         <span
-          className={`flex h-8 w-8 items-center justify-center rounded-lg transition sm:h-9 sm:w-9 sm:rounded-xl ${
+          className={`relative flex h-8 w-8 items-center justify-center rounded-lg transition sm:h-9 sm:w-9 sm:rounded-xl ${
             active ? "bg-sea-500/15 text-sea-600" : "bg-transparent text-ink-700"
           }`}
         >
           {icon}
+          {badgeCount && badgeCount > 0 ? (
+            <span className="absolute -mt-6 ml-5 min-w-[1.05rem] rounded-full bg-red-500 px-1 text-center text-[9px] font-bold leading-4 text-white shadow-sm">
+              {badgeCount > 9 ? "9+" : badgeCount}
+            </span>
+          ) : null}
         </span>
         {t(labelKey)}
       </button>
@@ -37,7 +45,7 @@ export function BottomNav() {
   };
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-mist-200 bg-white/95 pb-[max(0.4rem,env(safe-area-inset-bottom))] pt-1 shadow-nav backdrop-blur-md">
+    <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-mist-200 bg-white/95 pb-[max(0.4rem,env(safe-area-inset-bottom))] pt-1 shadow-nav backdrop-blur-md lg:hidden">
       <div className="mx-auto flex max-w-2xl px-0.5">
         <Item
           id="first"
@@ -84,13 +92,14 @@ export function BottomNav() {
         <Item
           id="connections"
           labelKey="nav_connect"
+          badgeCount={pendingInvites}
           icon={
             <svg className="h-4 w-4 sm:h-5 sm:w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 strokeWidth={2}
-                d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"
+                d="M8 10h8M8 14h5m5 8H6a2 2 0 01-2-2V6a2 2 0 012-2h12a2 2 0 012 2v14a2 2 0 01-2 2z"
               />
             </svg>
           }

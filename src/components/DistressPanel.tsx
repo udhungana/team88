@@ -37,6 +37,42 @@ export function DistressPanel({ open, onClose, defaultRegion }: Props) {
 
   const rid = () => `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 
+  const buildRegionalResourcesText = (regionId: string) => {
+    const r = getRegion(regionId);
+    const lines: string[] = [];
+    lines.push(`Helplines (${r.label}):`);
+    r.helplines.forEach((h) => {
+      lines.push(`- ${h.name}: ${h.number}${h.note ? ` (${h.note})` : ""}`);
+    });
+    lines.push("Curated links:");
+    r.links.forEach((l) => {
+      lines.push(`- ${l.label}: ${l.url}`);
+    });
+    return lines.join("\n");
+  };
+
+  const toAlternatingConversation = (items: DistressMessage[]) => {
+    // Perplexity expects alternating roles; collapse duplicates and start with a user turn.
+    const normalized: { role: "user" | "assistant"; content: string }[] = [];
+    for (const item of items) {
+      const content = item.text.trim();
+      if (!content) continue;
+      const role = item.role;
+      const prev = normalized[normalized.length - 1];
+      if (prev && prev.role === role) {
+        prev.content = `${prev.content}\n${content}`.trim();
+      } else {
+        normalized.push({ role, content });
+      }
+    }
+
+    while (normalized.length > 0 && normalized[0]?.role !== "user") {
+      normalized.shift();
+    }
+
+    return normalized.slice(-12);
+  };
+
   const send = async () => {
     const t = input.trim();
     if (!t || loading) return;
@@ -47,31 +83,33 @@ export function DistressPanel({ open, onClose, defaultRegion }: Props) {
     if (isOpenAiConfigured()) {
       setLoading(true);
       try {
-        const convo = [...messages, userMsg].map((x) => ({
-          role: x.role,
-          content: x.text,
-        })) as { role: "user" | "assistant"; content: string }[];
-        const reply = await fetchDistressAssistantReply({
+        const convo = toAlternatingConversation([...messages, userMsg]);
+        const aiPromise = fetchDistressAssistantReply({
           regionId: region,
-          messages: convo.slice(-12),
+          messages: convo,
         });
-        setMessages((m) => [...m, { id: rid(), role: "assistant", text: reply }]);
+        const timeoutPromise = new Promise<string>((_, reject) =>
+          setTimeout(() => reject(new Error("AI timeout")), 2600)
+        );
+
+        const reply = await Promise.race([aiPromise, timeoutPromise]);
+        const withResources = `${reply}\n\n${buildRegionalResourcesText(region)}`;
+        setMessages((m) => [...m, { id: rid(), role: "assistant", text: withResources }]);
       } catch (e) {
-        const fallback = distressReply(t, region);
-        const err = e instanceof Error ? e.message : "Unknown error";
+        const fallback = `${distressReply(t, region)}\n\n${buildRegionalResourcesText(region)}`;
         setMessages((m) => [
           ...m,
           {
             id: rid(),
             role: "assistant",
-            text: `${fallback}\n\n(AI request failed: ${err.slice(0, 200)} — showing scripted fallback.)`,
+            text: fallback,
           },
         ]);
       } finally {
         setLoading(false);
       }
     } else {
-      const assistantText = distressReply(t, region);
+      const assistantText = `${distressReply(t, region)}\n\n${buildRegionalResourcesText(region)}`;
       setMessages((m) => [...m, { id: rid(), role: "assistant", text: assistantText }]);
     }
   };
@@ -79,8 +117,9 @@ export function DistressPanel({ open, onClose, defaultRegion }: Props) {
   const info = getRegion(region);
 
   return (
-    <div className="fixed inset-0 z-[70] flex flex-col bg-mist-100">
-      <header className="flex items-center justify-between border-b border-mist-200 bg-white px-4 py-3">
+    <div className="fixed inset-0 z-[70] flex flex-col bg-white lg:items-center lg:justify-center lg:bg-ink-950/45 lg:p-6">
+      <div className="flex h-full flex-col bg-white lg:h-[min(90vh,860px)] lg:w-full lg:max-w-5xl lg:overflow-hidden lg:rounded-[28px] lg:shadow-2xl lg:ring-1 lg:ring-mist-200">
+      <header className="flex items-center justify-between border-b border-mist-200 bg-white px-4 py-3 lg:px-5 lg:py-4">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-red-600">
             {t("distress_title")}
@@ -99,7 +138,7 @@ export function DistressPanel({ open, onClose, defaultRegion }: Props) {
         </button>
       </header>
 
-      <div className="border-b border-mist-200 bg-white px-4 py-3">
+      <div className="border-b border-mist-200 bg-white px-4 py-3 lg:px-5">
         <label className="block text-xs font-medium text-ink-700">{t("distress_region")}</label>
         <select
           className="mt-1 w-full rounded-xl border border-mist-200 px-3 py-2 text-sm"
@@ -114,8 +153,8 @@ export function DistressPanel({ open, onClose, defaultRegion }: Props) {
         </select>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-4 py-4">
-        <div className="mx-auto max-w-md space-y-3">
+      <div className="flex-1 overflow-y-auto px-4 py-4 lg:px-6 lg:py-5">
+        <div className="mx-auto max-w-md space-y-3 lg:max-w-3xl">
           {messages.map((m) => (
             <div
               key={m.id}
@@ -168,8 +207,8 @@ export function DistressPanel({ open, onClose, defaultRegion }: Props) {
         </div>
       </div>
 
-      <div className="border-t border-mist-200 bg-white p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-        <div className="mx-auto flex max-w-md gap-2">
+      <div className="border-t border-mist-200 bg-white p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] lg:px-5 lg:pb-4 lg:pt-4">
+        <div className="mx-auto flex max-w-md gap-2 lg:max-w-3xl">
           <input
             className="min-w-0 flex-1 rounded-2xl border border-mist-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-sea-500/30"
             value={input}
@@ -187,6 +226,7 @@ export function DistressPanel({ open, onClose, defaultRegion }: Props) {
             {loading ? "…" : t("send")}
           </button>
         </div>
+      </div>
       </div>
     </div>
   );

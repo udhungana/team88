@@ -37,7 +37,7 @@ function capSections(
 
 export function ProfilePanel() {
   const { t } = useT();
-  const { currentUser, setCurrentUser } = useApp();
+  const { currentUser, setCurrentUser, logout } = useApp();
   const [lang, setLang] = useState<AppLocale>(currentUser?.appLanguage ?? "en");
   const [savedLang, setSavedLang] = useState(false);
   const [savedTags, setSavedTags] = useState(false);
@@ -117,8 +117,18 @@ export function ProfilePanel() {
     window.setTimeout(() => setSavedTags(false), 2000);
   };
 
+  const confirmAndLogout = () => {
+    const ok = window.confirm(t("logout_confirm"));
+    if (ok) logout();
+  };
+
+  const confirmAndDeleteAccount = () => {
+    const ok = window.confirm(t("delete_account_confirm"));
+    if (ok) logout();
+  };
+
   return (
-    <div className="mx-auto max-w-md px-4 pb-32 pt-6">
+    <div className="mx-auto max-w-md px-4 pb-32 pt-6 tablet:max-w-4xl tablet:px-6 tablet:pb-22 tablet:pt-8 lg:max-w-6xl lg:px-8 lg:pb-14 lg:pt-10">
       <header className="mb-6">
         <p className="font-display text-xs font-semibold uppercase tracking-widest text-coral-500">
           {t("nav_profile")}
@@ -127,7 +137,7 @@ export function ProfilePanel() {
         <p className="mt-1 text-sm text-ink-700">{t("profile_sub")}</p>
       </header>
 
-      <div className="space-y-4 rounded-3xl bg-white p-5 shadow-soft ring-1 ring-mist-200">
+      <div className="token-panel section-fade space-y-4 rounded-3xl bg-white p-5 ring-1 ring-mist-200 tablet:max-w-2xl lg:max-w-xl lg:p-6">
         <div>
           <p className="text-sm font-semibold text-ink-900">{t("profile_lang")}</p>
           <p className="mt-1 text-xs text-ink-600">{t("profile_lang_sub")}</p>
@@ -152,7 +162,8 @@ export function ProfilePanel() {
         </div>
       </div>
 
-      <div className="mt-6 space-y-5">
+      <div className="mt-6 tablet:grid tablet:grid-cols-1 tablet:gap-5 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,0.75fr)] lg:gap-6 lg:items-start">
+        <div className="space-y-5">
         <EditableTagSection
           title={t("interests_sec")}
           empty={t("none_yet")}
@@ -197,18 +208,33 @@ export function ProfilePanel() {
         >
           {t("profile_save_tags")}
         </button>
+        <button
+          type="button"
+          onClick={confirmAndLogout}
+          className="w-full rounded-2xl border border-mist-200 bg-white py-3 text-sm font-semibold text-ink-800"
+        >
+          {t("logout")}
+        </button>
+        <button
+          type="button"
+          onClick={confirmAndDeleteAccount}
+          className="w-full rounded-2xl border border-red-200 bg-red-50 py-3 text-sm font-semibold text-red-700"
+        >
+          {t("delete_account")}
+        </button>
         {savedTags && (
           <p className="text-center text-xs font-medium text-sage-600">{t("profile_tags_saved")}</p>
         )}
-      </div>
+        </div>
 
-      <div className="mt-8 rounded-3xl bg-gradient-to-br from-violet-50 via-white to-sea-50 p-5 shadow-soft ring-1 ring-violet-200/60">
+        <div className="token-panel section-fade mt-8 rounded-3xl bg-gradient-to-br from-violet-50 via-white to-sea-50 p-5 ring-1 ring-violet-200/60 tablet:mt-0 lg:sticky lg:top-6">
         <p className="text-[10px] font-bold uppercase tracking-widest text-violet-700">{t("pro_badge")}</p>
         <h3 className="mt-2 font-display text-lg font-bold text-ink-950">{t("pro_title")}</h3>
         <p className="mt-3 text-sm leading-relaxed text-ink-700">{t("pro_body")}</p>
         <p className="mt-4 rounded-2xl bg-white/80 px-3 py-2 text-[11px] leading-relaxed text-ink-600 ring-1 ring-mist-200">
           {t("pro_note")}
         </p>
+        </div>
       </div>
     </div>
   );
