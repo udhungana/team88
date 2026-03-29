@@ -58,6 +58,7 @@ export function HomeDashboard() {
   const dragStartX = useRef(0);
   const dragging = useRef(false);
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
+  const [moodSelected, setMoodSelected] = useState(false);
 
 
   const emoji = MOOD_EMOJIS[idx] ?? MOOD_EMOJIS[1]!;
@@ -181,6 +182,10 @@ export function HomeDashboard() {
     setTypedMood("");
   };
 
+  const revealPeople = () => {
+    setMoodSelected(true);
+  };
+
   const onCardClick = () => {
     if (top) {
       setSelectedCardId(selectedCardId === top.id ? null : top.id);
@@ -222,6 +227,7 @@ export function HomeDashboard() {
       </header>
 
       <div className="tablet:grid tablet:grid-cols-1 tablet:gap-5 tablet:items-start lg:gap-7">
+        {!moodSelected ? (
         <section className="token-panel section-fade rounded-3xl bg-white p-5 ring-1 ring-mist-200 lg:p-6">
           <p className="text-center text-sm font-semibold text-ink-800">{t("mood")}</p>
           <div className="mt-4 flex items-center justify-center">
@@ -264,20 +270,72 @@ export function HomeDashboard() {
             <input
               className="mt-1 w-full rounded-2xl border border-mist-200 px-4 py-3 text-sm outline-none ring-sea-500/30 focus:ring-2"
               value={typedMood}
-              onChange={(e) => setTypedMood(e.target.value)}
+              onChange={(e) => {
+                setTypedMood(e.target.value);
+              }}
               placeholder={t("mood_type_ph")}
             />
           </label>
 
-          <div className="mt-8 border-t border-mist-200 pt-6">
-            <h3 className="font-display text-lg font-semibold text-ink-950">{t("people_vibe")}</h3>
-            <p className="text-xs text-ink-700 lg:hidden">{t("swipe_hint")}</p>
-            <p className="hidden lg:block text-xs text-ink-700 mt-1">Click a card to connect or pass</p>
+          <button
+            type="button"
+            onClick={revealPeople}
+            className="mt-4 w-full rounded-2xl bg-sea-500 py-3 text-sm font-semibold text-white transition hover:bg-sea-600"
+          >
+            Go
+          </button>
 
-            <div className="relative mx-auto mt-4 min-h-[30rem] max-w-md pt-8 lg:max-w-2xl lg:min-h-[38rem] lg:pt-10">
-              {back && <StackCard peer={back} depth={2} t={t} />}
-              {mid && <StackCard peer={mid} depth={1} t={t} />}
-              {top ? (
+          <div className="mt-8 border-t border-mist-200 pt-6">
+            <p className="rounded-2xl bg-mist-100 px-4 py-3 text-center text-sm text-ink-700 ring-1 ring-mist-200">
+              Select your mood and tap Go to see people you may connect with.
+            </p>
+          </div>
+
+          {currentUser.lastMoodSubmittedAt && (
+            <p className="mt-4 text-center text-[11px] text-ink-700">{t("last_checkin")}</p>
+          )}
+        </section>
+        ) : (
+        <section className="token-panel section-fade rounded-3xl bg-white p-5 ring-1 ring-mist-200 lg:p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div
+                role="img"
+                aria-label={moodLabel}
+                className="select-none rounded-2xl bg-mist-100 px-4 py-3 text-3xl leading-none ring-1 ring-mist-200"
+              >
+                {emoji}
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-ink-700 uppercase">{t("mood")}</p>
+                <p className="text-sm font-semibold text-ink-900">{moodLabel}</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setMoodSelected(false);
+                setTypedMood("");
+              }}
+              className="flex items-center gap-1 rounded-lg px-3 py-2 text-xs font-medium text-ink-600 hover:bg-mist-100 transition"
+              aria-label="Change mood"
+            >
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              Change
+            </button>
+          </div>
+          <h3 className="text-center font-display text-lg font-semibold text-ink-950">
+            {t("people_vibe")}
+          </h3>
+          <p className="text-center text-xs text-ink-700 mt-2 lg:hidden">{t("swipe_hint")}</p>
+          <p className="hidden lg:block text-center text-xs text-ink-700 mt-2">Click a card to connect or pass</p>
+
+                <div className="relative mx-auto mt-4 min-h-[30rem] max-w-md pt-8 lg:max-w-2xl lg:min-h-[38rem] lg:pt-10">
+                  {back && <StackCard peer={back} depth={2} t={t} />}
+                  {mid && <StackCard peer={mid} depth={1} t={t} />}
+                  {top ? (
                 <div
                   role="application"
                   aria-label={t("swipe_aria")}
@@ -288,6 +346,17 @@ export function HomeDashboard() {
                   onPointerCancel={onPointerUp}
                   onClick={onCardClick}
                 >
+                  {!isDragging && (
+                    <div className="pointer-events-none absolute inset-x-0 top-1/2 z-30 flex -translate-y-1/2 justify-between px-1 lg:hidden">
+                      <span className="animate-pulse rounded-full bg-red-500/90 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white shadow-lg">
+                        Swipe • {t("pass")}
+                      </span>
+                      <span className="animate-pulse rounded-full bg-sea-500/90 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white shadow-lg">
+                        Swipe • {t("connect")}
+                      </span>
+                    </div>
+                  )}
+
                   <div
                     className={`relative z-20 mx-auto max-w-md select-none ${!isDragging && dragX === 0 ? "transition-transform duration-200 ease-out" : ""}`}
                     style={{
@@ -337,25 +406,18 @@ export function HomeDashboard() {
                     )}
                   </div>
                 </div>
-              ) : (
-                <p className="token-card rounded-2xl bg-white p-6 text-center text-sm text-ink-700 ring-1 ring-mist-200">
-                  {rankedList.length === 0 ? t("empty_all") : t("empty_passed")}
-                </p>
-              )}
-            </div>
-
-            {top && (
-              <div className="mt-4 flex justify-center gap-6 text-[11px] text-ink-600 lg:hidden">
-                <span>{t("swipe_hint_lr")}</span>
-                <span>{t("swipe_hint_rl")}</span>
-              </div>
-            )}
-          </div>
+                  ) : (
+                    <p className="token-card rounded-2xl bg-white p-6 text-center text-sm text-ink-700 ring-1 ring-mist-200">
+                      {rankedList.length === 0 ? t("empty_all") : t("empty_passed")}
+                    </p>
+                  )}
+                </div>
 
           {currentUser.lastMoodSubmittedAt && (
             <p className="mt-4 text-center text-[11px] text-ink-700">{t("last_checkin")}</p>
           )}
         </section>
+        )}
       </div>
 
       {toast && (

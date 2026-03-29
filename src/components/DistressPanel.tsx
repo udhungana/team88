@@ -117,8 +117,8 @@ export function DistressPanel({ open, onClose, defaultRegion }: Props) {
   const info = getRegion(region);
 
   return (
-    <div className="fixed inset-0 z-[70] flex flex-col bg-mist-100 lg:items-center lg:justify-center lg:bg-ink-950/40 lg:p-6 lg:backdrop-blur-sm">
-      <div className="flex h-full flex-col bg-mist-100 lg:h-[min(90vh,860px)] lg:w-full lg:max-w-5xl lg:overflow-hidden lg:rounded-[28px] lg:bg-white lg:shadow-2xl lg:ring-1 lg:ring-white/80">
+    <div className="fixed inset-0 z-[70] flex flex-col bg-white lg:items-center lg:justify-center lg:bg-ink-950/45 lg:p-6">
+      <div className="flex h-full flex-col bg-white lg:h-[min(90vh,860px)] lg:w-full lg:max-w-5xl lg:overflow-hidden lg:rounded-[28px] lg:shadow-2xl lg:ring-1 lg:ring-mist-200">
       <header className="flex items-center justify-between border-b border-mist-200 bg-white px-4 py-3 lg:px-5 lg:py-4">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-red-600">

@@ -37,7 +37,7 @@ function capSections(
 
 export function ProfilePanel() {
   const { t } = useT();
-  const { currentUser, setCurrentUser } = useApp();
+  const { currentUser, setCurrentUser, logout } = useApp();
   const [lang, setLang] = useState<AppLocale>(currentUser?.appLanguage ?? "en");
   const [savedLang, setSavedLang] = useState(false);
   const [savedTags, setSavedTags] = useState(false);
@@ -115,6 +115,16 @@ export function ProfilePanel() {
     setCurrentUser({ ...currentUser, tags, tagSections: sections });
     setSavedTags(true);
     window.setTimeout(() => setSavedTags(false), 2000);
+  };
+
+  const confirmAndLogout = () => {
+    const ok = window.confirm(t("logout_confirm"));
+    if (ok) logout();
+  };
+
+  const confirmAndDeleteAccount = () => {
+    const ok = window.confirm(t("delete_account_confirm"));
+    if (ok) logout();
   };
 
   return (
@@ -197,6 +207,20 @@ export function ProfilePanel() {
           className="w-full rounded-2xl bg-ink-900 py-3 text-sm font-semibold text-white"
         >
           {t("profile_save_tags")}
+        </button>
+        <button
+          type="button"
+          onClick={confirmAndLogout}
+          className="w-full rounded-2xl border border-mist-200 bg-white py-3 text-sm font-semibold text-ink-800"
+        >
+          {t("logout")}
+        </button>
+        <button
+          type="button"
+          onClick={confirmAndDeleteAccount}
+          className="w-full rounded-2xl border border-red-200 bg-red-50 py-3 text-sm font-semibold text-red-700"
+        >
+          {t("delete_account")}
         </button>
         {savedTags && (
           <p className="text-center text-xs font-medium text-sage-600">{t("profile_tags_saved")}</p>

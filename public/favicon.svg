@@ -1,4 +1,15 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
-  <rect width="32" height="32" rx="8" fill="#3d6ef5"/>
-  <path d="M8 18c2.5-3 5.5-3 8 0M16 10v0" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
+<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <!-- Solid background -->
+  <rect width="64" height="64" rx="12" fill="#06b6d4"/>
+  
+  <!-- Left card -->
+  <rect x="8" y="14" width="20" height="28" rx="3" fill="#ffffff" opacity="0.95" transform="rotate(-18 18 28)"/>
+  <circle cx="18" cy="18" r="2.5" fill="#06b6d4"/>
+  
+  <!-- Right card -->
+  <rect x="36" y="14" width="20" height="28" rx="3" fill="#ffffff" opacity="0.95" transform="rotate(18 46 28)"/>
+  <circle cx="46" cy="18" r="2.5" fill="#06b6d4"/>
+  
+  <!-- Center heart icon -->
+  <path d="M32 48 C 32 48, 24 40, 24 36 C 24 32, 27 29, 30 29 C 32 29, 32 30, 32 30 C 32 30, 32 29, 34 29 C 37 29, 40 32, 40 36 C 40 40, 32 48, 32 48 Z" fill="#ffffff"/>
 </svg>

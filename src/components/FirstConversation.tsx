@@ -65,6 +65,7 @@ export function FirstConversation() {
     addReminder({
       label: `Talk — ${whenLabel}`,
       starterSummary: starter.text.slice(0, 200) + (starter.text.length > 200 ? "…" : ""),
+      audience: fc.audience,
       scheduledAt: fc.reminderWhen,
     });
 
@@ -85,6 +86,7 @@ export function FirstConversation() {
         </p>
         <h2 className="font-display text-2xl font-bold text-ink-950">{t("first_title")}</h2>
         <p className="mt-2 text-sm text-ink-700">{t("first_sub")}</p>
+        <p className="mt-1 text-xs text-ink-600">{t("first_desc_short")}</p>
       </header>
 
       {fc.phase === "feel" && (
@@ -101,12 +103,11 @@ export function FirstConversation() {
           </label>
           <div className="lg:flex lg:flex-col lg:justify-between">
             <p className="text-sm font-medium text-ink-800">{t("who_talk")}</p>
-            <div className="mt-2 grid grid-cols-3 gap-2">
+            <div className="mt-2 grid grid-cols-2 gap-2">
               {(
                 [
                   ["family", "family"],
                   ["friends", "friend"],
-                  ["stranger", "stranger"],
                 ] as const
               ).map(([id, key]) => (
                 <button

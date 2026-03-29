@@ -81,8 +81,9 @@ const TAB_META: {
 
 export function MainShell() {
   const { t } = useT();
-  const { tab, setTab, currentUser, logout } = useApp();
+  const { tab, setTab, currentUser, invites } = useApp();
   const [distress, setDistress] = useState(false);
+  const pendingInvites = invites.filter((i) => i.status === "pending").length;
 
   useEffect(() => {
     const ne = currentUser?.appLanguage === "ne";
@@ -130,29 +131,22 @@ export function MainShell() {
                   }`}
                 >
                   <span
-                    className={`flex h-9 w-9 items-center justify-center rounded-xl ${
+                    className={`relative flex h-9 w-9 items-center justify-center rounded-xl ${
                       active ? "bg-sea-500/15 text-sea-600" : "bg-white/10"
                     }`}
                   >
                     {item.icon}
+                    {item.id === "connections" && pendingInvites > 0 ? (
+                      <span className="absolute -right-1 -top-1 min-w-[1.1rem] rounded-full bg-red-500 px-1 text-center text-[10px] font-bold leading-4 text-white shadow-sm">
+                        {pendingInvites > 9 ? "9+" : pendingInvites}
+                      </span>
+                    ) : null}
                   </span>
                   {t(item.labelKey)}
                 </button>
               );
             })}
 
-                        <button
-                          type="button"
-                          onClick={logout}
-                          className="hover-depth mt-4 flex w-full items-center gap-3 rounded-2xl border border-white/20 px-3 py-3 text-left text-sm font-semibold text-white/90 transition hover:bg-white/10 hover:text-white"
-                        >
-                          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/10">
-                            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                            </svg>
-                          </span>
-                          {t("logout")}
-                        </button>
             <button
               type="button"
               onClick={() => setDistress(true)}
@@ -178,7 +172,7 @@ export function MainShell() {
       <button
         type="button"
         onClick={() => setDistress(true)}
-        className="distress-fab fixed right-4 z-50 flex items-center gap-2 rounded-full bg-red-600 px-4 py-3 text-xs font-bold uppercase tracking-wide text-white shadow-lg transition hover:bg-red-700 lg:hidden"
+        className="fixed right-4 top-4 z-50 flex items-center gap-2 rounded-full bg-red-600 px-4 py-3 text-xs font-bold uppercase tracking-wide text-white shadow-lg transition hover:bg-red-700 lg:hidden"
       >
         <span className="text-lg leading-none">!</span>
         {t("help_now")}

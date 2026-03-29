@@ -137,12 +137,3 @@ html.lang-ne .font-display {
   font-family: "Noto Sans Devanagari", "Outfit", system-ui, sans-serif;
 }
 
-.distress-fab {
-  bottom: max(7rem, calc(7rem + env(safe-area-inset-bottom)));
-}
-
-@media (min-width: 1024px) {
-  .distress-fab {
-    bottom: 1.75rem;
-  }
-}

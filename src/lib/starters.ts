@@ -7,7 +7,7 @@ function englishStarters(input: FirstConversationInputs): ConversationStarter[] 
   const feel = feeling.trim() || "how you’ve been feeling";
 
   const audienceLabel =
-    audience === "family" ? "family" : audience === "friends" ? "friend" : "someone new";
+    audience === "family" ? "family" : "friend";
 
   return [
     {
@@ -73,9 +73,7 @@ function nepaliStarters(input: FirstConversationInputs): ConversationStarter[] {
   const aud =
     audience === "family"
       ? "परिवार"
-      : audience === "friends"
-        ? "साथी"
-        : "नयाँ व्यक्ति";
+      : "साथी";
   const tlab = neTimeLabel(timePreference);
 
   return [

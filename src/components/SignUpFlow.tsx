@@ -17,6 +17,28 @@ const FEELING_CHIPS = [
   "Grateful",
 ];
 
+const ETHNICITY_OPTIONS = [
+  "Asian",
+  "South Asian",
+  "Southeast Asian",
+  "East Asian",
+  "Black or African",
+  "African American",
+  "White or Caucasian",
+  "Hispanic or Latino",
+  "Middle Eastern or North African",
+  "Arab",
+  "Indigenous or Native",
+  "Pacific Islander",
+  "Mixed / Multiracial",
+  "European",
+  "Caribbean",
+  "Central Asian",
+  "Roma",
+  "Other",
+  "Prefer not to say",
+] as const;
+
 function newUserId() {
   return `u-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 }
@@ -29,36 +51,66 @@ export function SignUpFlow() {
   const [displayMode, setDisplayMode] = useState<DisplayMode>("anonymous");
   const [legalName, setLegalName] = useState("");
   const [displayName, setDisplayName] = useState("");
-  const [tagInput, setTagInput] = useState("");
-  const [tags, setTags] = useState<string[]>([]);
+  const [interestInput, setInterestInput] = useState("");
+  const [hobbyInput, setHobbyInput] = useState("");
+  const [occupationInput, setOccupationInput] = useState("");
+  const [interests, setInterests] = useState<string[]>([]);
+  const [hobbies, setHobbies] = useState<string[]>([]);
+  const [occupations, setOccupations] = useState<string[]>([]);
   const [feelingText, setFeelingText] = useState("");
   const [ethnicity, setEthnicity] = useState("");
   const [region, setRegion] = useState("us");
 
-  const addTagsFromInput = (raw: string) => {
+  const allTags = [...interests, ...hobbies, ...occupations];
+  const atTagCap = allTags.length >= 10;
+
+  const addToSection = (
+    section: "interests" | "hobbies" | "occupations",
+    raw: string,
+    clear: () => void
+  ) => {
     const parts = raw
       .split(",")
       .map((x) => x.trim())
       .filter(Boolean);
     if (parts.length === 0) return;
-    setTags((prev) => {
-      let next = [...prev];
-      for (const t of parts) {
-        if (next.length >= 10) break;
-        const lower = t.toLowerCase();
-        if (next.some((x) => x.toLowerCase() === lower)) continue;
-        next.push(t);
-      }
-      return next;
-    });
-    setTagInput("");
+
+    const current = [...interests, ...hobbies, ...occupations];
+    let remaining = Math.max(0, 10 - current.length);
+    if (remaining <= 0) {
+      clear();
+      return;
+    }
+
+    const uniqueToAdd: string[] = [];
+    const seen = new Set(current.map((x) => x.toLowerCase()));
+    for (const p of parts) {
+      const key = p.toLowerCase();
+      if (seen.has(key)) continue;
+      uniqueToAdd.push(p);
+      seen.add(key);
+      remaining--;
+      if (remaining <= 0) break;
+    }
+
+    if (uniqueToAdd.length > 0) {
+      if (section === "interests") setInterests((prev) => [...prev, ...uniqueToAdd]);
+      else if (section === "hobbies") setHobbies((prev) => [...prev, ...uniqueToAdd]);
+      else setOccupations((prev) => [...prev, ...uniqueToAdd]);
+    }
+
+    clear();
   };
 
-  const removeTag = (t: string) => setTags((prev) => prev.filter((x) => x !== t));
+  const removeTag = (section: "interests" | "hobbies" | "occupations", tag: string) => {
+    if (section === "interests") setInterests((prev) => prev.filter((x) => x !== tag));
+    else if (section === "hobbies") setHobbies((prev) => prev.filter((x) => x !== tag));
+    else setOccupations((prev) => prev.filter((x) => x !== tag));
+  };
 
   const canStep0 = username.trim().length >= 2 && password.length >= 4;
   const canFinish =
-    tags.length > 0 &&
+    allTags.length > 0 &&
     feelingText.trim().length > 0 &&
     ethnicity.trim().length > 0 &&
     (displayMode === "anonymous" || legalName.trim().length > 0);
@@ -69,6 +121,12 @@ export function SignUpFlow() {
   };
 
   const finish = () => {
+    const tagSections = {
+      interests,
+      hobbies,
+      professions: occupations,
+    };
+
     const u: CurrentUser = {
       id: newUserId(),
       displayMode,
@@ -79,7 +137,8 @@ export function SignUpFlow() {
           : legalName.trim(),
       username: username.trim(),
       password,
-      tags,
+      tags: [...interests, ...hobbies, ...occupations],
+      tagSections,
       feelingText: feelingText.trim(),
       ethnicity: ethnicity.trim(),
       region,
@@ -222,42 +281,128 @@ export function SignUpFlow() {
 
               <div className="rounded-2xl border border-white/20 bg-white/8 p-4 shadow-sm lg:col-span-2">
                 <p className="text-sm font-medium text-white/90">
-                  {te("tags_title")}{" "}
-                  <span className="font-normal text-white/70">{te("tags_max")}</span>
+                  {te("tags_title")} {" "}
+                  <span className="font-normal text-white/70">{te("tags_max")} ({allTags.length}/10)</span>
                 </p>
                 <p className="text-xs text-white/70">{te("tags_hint")}</p>
-                <div className="mt-2 flex gap-2">
-                  <input
-                    className="min-w-0 flex-1 rounded-xl border border-white/25 bg-white/10 px-3 py-2 text-sm text-white placeholder:text-white/55 outline-none ring-sea-300/30 focus:ring-2"
-                    value={tagInput}
-                    onChange={(e) => setTagInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        addTagsFromInput(tagInput);
-                      }
-                    }}
-                    placeholder={te("tags_ph")}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => addTagsFromInput(tagInput)}
-                    className="rounded-xl bg-ink-800 px-4 py-2 text-sm font-medium text-white"
-                  >
-                    {te("add")}
-                  </button>
-                </div>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {tags.map((t) => (
-                    <button
-                      key={t}
-                      type="button"
-                      onClick={() => removeTag(t)}
-                      className="rounded-full bg-sea-400/25 px-3 py-1 text-xs font-medium text-sea-100"
-                    >
-                      {t} ×
-                    </button>
-                  ))}
+
+                <div className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-3">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-white/85">{te("interests_sec")}</p>
+                    <div className="mt-2 flex gap-2">
+                      <input
+                        className="min-w-0 flex-1 rounded-xl border border-white/25 bg-white/10 px-3 py-2 text-sm text-white placeholder:text-white/55 outline-none ring-sea-300/30 focus:ring-2"
+                        value={interestInput}
+                        onChange={(e) => setInterestInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            addToSection("interests", interestInput, () => setInterestInput(""));
+                          }
+                        }}
+                        placeholder={te("tag_add_ph")}
+                        disabled={atTagCap}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => addToSection("interests", interestInput, () => setInterestInput(""))}
+                        className="rounded-xl bg-ink-800 px-3 py-2 text-xs font-medium text-white disabled:opacity-40"
+                        disabled={atTagCap}
+                      >
+                        {te("add")}
+                      </button>
+                    </div>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {interests.map((tag) => (
+                        <button
+                          key={`i-${tag}`}
+                          type="button"
+                          onClick={() => removeTag("interests", tag)}
+                          className="rounded-full bg-sea-400/25 px-3 py-1 text-xs font-medium text-sea-100"
+                        >
+                          {tag} ×
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-white/85">{te("hobbies_sec")}</p>
+                    <div className="mt-2 flex gap-2">
+                      <input
+                        className="min-w-0 flex-1 rounded-xl border border-white/25 bg-white/10 px-3 py-2 text-sm text-white placeholder:text-white/55 outline-none ring-sea-300/30 focus:ring-2"
+                        value={hobbyInput}
+                        onChange={(e) => setHobbyInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            addToSection("hobbies", hobbyInput, () => setHobbyInput(""));
+                          }
+                        }}
+                        placeholder={te("tag_add_ph")}
+                        disabled={atTagCap}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => addToSection("hobbies", hobbyInput, () => setHobbyInput(""))}
+                        className="rounded-xl bg-ink-800 px-3 py-2 text-xs font-medium text-white disabled:opacity-40"
+                        disabled={atTagCap}
+                      >
+                        {te("add")}
+                      </button>
+                    </div>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {hobbies.map((tag) => (
+                        <button
+                          key={`h-${tag}`}
+                          type="button"
+                          onClick={() => removeTag("hobbies", tag)}
+                          className="rounded-full bg-sea-400/25 px-3 py-1 text-xs font-medium text-sea-100"
+                        >
+                          {tag} ×
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-white/85">{te("profession_sec")}</p>
+                    <div className="mt-2 flex gap-2">
+                      <input
+                        className="min-w-0 flex-1 rounded-xl border border-white/25 bg-white/10 px-3 py-2 text-sm text-white placeholder:text-white/55 outline-none ring-sea-300/30 focus:ring-2"
+                        value={occupationInput}
+                        onChange={(e) => setOccupationInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            addToSection("occupations", occupationInput, () => setOccupationInput(""));
+                          }
+                        }}
+                        placeholder={te("tag_add_ph")}
+                        disabled={atTagCap}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => addToSection("occupations", occupationInput, () => setOccupationInput(""))}
+                        className="rounded-xl bg-ink-800 px-3 py-2 text-xs font-medium text-white disabled:opacity-40"
+                        disabled={atTagCap}
+                      >
+                        {te("add")}
+                      </button>
+                    </div>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {occupations.map((tag) => (
+                        <button
+                          key={`o-${tag}`}
+                          type="button"
+                          onClick={() => removeTag("occupations", tag)}
+                          className="rounded-full bg-sea-400/25 px-3 py-1 text-xs font-medium text-sea-100"
+                        >
+                          {tag} ×
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -290,12 +435,20 @@ export function SignUpFlow() {
 
               <label className="block">
                 <span className="text-sm font-medium text-white/90">{te("ethnicity")}</span>
-                <input
+                <select
                   className="mt-1 w-full rounded-2xl border border-white/25 bg-white/10 px-4 py-3 text-sm text-white placeholder:text-white/55 outline-none ring-sea-300/30 focus:ring-2"
                   value={ethnicity}
                   onChange={(e) => setEthnicity(e.target.value)}
-                  placeholder={te("ethnicity_ph")}
-                />
+                >
+                  <option className="bg-white text-ink-900" value="">
+                    {te("ethnicity_ph")}
+                  </option>
+                  {ETHNICITY_OPTIONS.map((opt) => (
+                    <option key={opt} className="bg-white text-ink-900" value={opt}>
+                      {opt}
+                    </option>
+                  ))}
+                </select>
               </label>
 
               <label className="block">

@@ -34,9 +34,11 @@ function migrateUser(raw: CurrentUser | null): CurrentUser | null {
 function mergeFirstConvo(raw?: Partial<FirstConvoPersist>): FirstConvoPersist {
   const d = defaultFirstConvo();
   if (!raw) return d;
+  const audience = raw.audience === "family" || raw.audience === "friends" ? raw.audience : d.audience;
   return {
     ...d,
     ...raw,
+    audience,
     starters: Array.isArray(raw.starters) ? raw.starters : d.starters,
   };
 }
@@ -62,6 +64,7 @@ type AppCtx = {
   refreshMatches: () => void;
   scheduledReminders: ScheduledReminder[];
   addReminder: (r: Omit<ScheduledReminder, "id" | "createdAt">) => void;
+  deleteReminder: (id: string) => void;
   updateMood: (emoji: string, text: string) => void;
   firstConvo: FirstConvoPersist;
   patchFirstConvo: (p: Partial<FirstConvoPersist>) => void;
@@ -120,7 +123,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
     
     setInvites(p.invites);
     setThreads(p.threads);
-    setScheduledReminders(p.scheduledReminders);
+    setScheduledReminders(
+      p.scheduledReminders.map((r) => ({
+        ...r,
+        audience: r.audience === "family" || r.audience === "friends" ? r.audience : undefined,
+      }))
+    );
     setFirstConvo(mergeFirstConvo(p.firstConvo));
   }, []);
 
@@ -256,6 +264,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     ]);
   }, []);
 
+  const deleteReminder = useCallback((id: string) => {
+    setScheduledReminders((prev) => prev.filter((r) => r.id !== id));
+  }, []);
+
   const updateMood = useCallback((emoji: string, text: string) => {
     setCurrentUserState((u) =>
       u
@@ -292,6 +304,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       refreshMatches,
       scheduledReminders,
       addReminder,
+      deleteReminder,
       updateMood,
       firstConvo,
       patchFirstConvo,
@@ -316,6 +329,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       refreshMatches,
       scheduledReminders,
       addReminder,
+      deleteReminder,
       updateMood,
       firstConvo,
       patchFirstConvo,
