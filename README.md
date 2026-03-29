@@ -2,6 +2,11 @@
 
 vibespace is a React + TypeScript wellness demo app built with Vite and Tailwind CSS.
 
+## Team Members
+- Swach Acharya
+- Utsav Dhungana
+- Lochan Acharya
+
 ## Features
 
 - Mood-based swipe matching
